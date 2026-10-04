@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // قواعد غرف واحد فينا للإنتاج
+    match /wahid_fina_rooms/{roomId} {
+      // قراءة الغرف مسموحة لأي مستخدم مصادق عليه
+      allow read: if request.auth != null;
+      
+      // إنشاء الغرفة مسموح فقط إذا كان منشئها هو المستخدم الحالي المسجل
+      allow create: if request.auth != null 
+        && request.resource.data.players[0].id == request.auth.uid;
+      
+      // تحديث بيانات الغرفة مسموح مع قيود أمان
+      allow update: if request.auth != null 
+        && request.resource.data.maxPlayers >= request.resource.data.players.size();
+      
+      // السماح بالحذف عند مغادرة جميع اللاعبين وتصفير القائمة
+      allow delete: if request.auth != null 
+        && resource.data.players.size() == 0;
+    }
+  }
+}

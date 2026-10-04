@@ -1,0 +1,51 @@
+name: wahid_fina
+description: "واحد فينا — لعبة اجتماعية نفسية تفاعلية"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Firebase
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # UI & Fonts
+  google_fonts: ^6.2.1
+  cupertino_icons: ^1.0.8
+  flutter_animate: ^4.5.0
+  lottie: ^3.1.2
+  shimmer: ^3.0.0
+
+  # Networking
+  http: ^1.2.2
+
+  # Utils
+  uuid: ^4.4.2
+  shared_preferences: ^2.3.2
+  intl: ^0.19.0
+
+  # Audio & Protection (1-on-1 support chat)
+  screen_protector: ^1.5.1
+  record: ^6.2.0
+  audioplayers: ^6.6.0
+  path_provider: ^2.1.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.12
+  riverpod_generator: ^2.4.3
+
+flutter:
+  uses-material-design: true
