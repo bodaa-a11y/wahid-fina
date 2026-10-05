@@ -65,6 +65,7 @@ class GlassButton extends StatefulWidget {
   final Color? selectedColor;
   final EdgeInsetsGeometry? padding;
   final double borderRadius;
+  final Gradient? gradient;
 
   const GlassButton({
     super.key,
@@ -74,6 +75,7 @@ class GlassButton extends StatefulWidget {
     this.selectedColor,
     this.padding,
     this.borderRadius = 16,
+    this.gradient,
   });
 
   @override
@@ -122,9 +124,12 @@ class _GlassButtonState extends State<GlassButton>
           duration: const Duration(milliseconds: 200),
           padding: widget.padding ?? const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: widget.isSelected
-                ? (widget.selectedColor ?? AppColors.primary).withOpacity(0.25)
-                : AppColors.glassWhite,
+            gradient: widget.gradient,
+            color: widget.gradient != null
+                ? null
+                : (widget.isSelected
+                    ? (widget.selectedColor ?? AppColors.primary).withOpacity(0.25)
+                    : AppColors.glassWhite),
             borderRadius: BorderRadius.circular(widget.borderRadius),
             border: Border.all(
               color: widget.isSelected

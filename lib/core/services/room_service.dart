@@ -53,15 +53,29 @@ class RoomService {
     return await _createRoom(player);
   }
 
-  // 🏗️ إنشاء غرفة جديدة
+  // 🏗️ إنشاء غرفة جديدة — توليد كود 6 أرقام
   Future<String> _createRoom(PlayerModel player) async {
     final random = Random();
     final maxPlayers = random.nextBool() ? 5 : 6; // 5 أو 6 لاعبين عشوائياً
     final questions = GameQuestions.getRandomQuestions(count: 10);
 
+    // كود فريد 6 أرقام
+    String code;
+    bool exists = true;
+    do {
+      code = (100000 + random.nextInt(900000)).toString();
+      final dup = await _db
+          .collection(_roomsCollection)
+          .where('code', isEqualTo: code)
+          .limit(1)
+          .get();
+      exists = dup.docs.isNotEmpty;
+    } while (exists);
+
     final roomRef = _db.collection(_roomsCollection).doc();
     final room = RoomModel(
       roomId: roomRef.id,
+      code: code,
       players: [player],
       status: RoomStatus.waiting,
       currentQuestionIndex: 0,
@@ -109,6 +123,25 @@ class RoomService {
 
       transaction.update(roomRef, updates);
     });
+  }
+
+  // 🔢 الانضمام لغرفة بالكود (6 أرقام)
+  Future<String> joinRoomByCode(String code, PlayerModel player) async {
+    final snap = await _db
+        .collection(_roomsCollection)
+        .where('code', isEqualTo: code.trim())
+        .limit(1)
+        .get();
+
+    if (snap.docs.isEmpty) throw Exception('مفيش غرفة بالكود ده 🤔');
+    final room = RoomModel.fromFirestore(snap.docs.first);
+
+    if (room.status != RoomStatus.waiting) throw Exception('اللعبة دي بدأت خلاص');
+    if (room.players.length >= room.maxPlayers) throw Exception('الغرفة ممتلئة');
+    if (room.players.any((p) => p.id == player.id)) return room.roomId;
+
+    await _joinRoom(room.roomId, player);
+    return room.roomId;
   }
 
   // 📡 Stream الغرفة (Real-time)

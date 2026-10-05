@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../services/room_service.dart';
 import '../services/claude_service.dart';
 import '../services/one_to_one_service.dart';
+import '../services/tts_service.dart';
 import '../models/player_model.dart';
 import '../models/room_model.dart';
 import '../models/one_to_one_models.dart';
@@ -13,6 +14,11 @@ final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 final roomServiceProvider = Provider<RoomService>((ref) => RoomService());
 final claudeServiceProvider = Provider<ClaudeService>((ref) => ClaudeService());
 final oneToOneServiceProvider = Provider<OneToOneService>((ref) => OneToOneService());
+final ttsServiceProvider = Provider<TtsService>((ref) {
+  final s = TtsService()..init();
+  ref.onDispose(s.dispose);
+  return s;
+});
 
 // --- Auth State ---
 final currentPlayerProvider = StateProvider<PlayerModel?>((ref) => null);

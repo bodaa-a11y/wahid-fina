@@ -11,6 +11,7 @@ import '../../core/providers/providers.dart';
 import '../../core/models/player_model.dart';
 import '../../core/models/room_model.dart';
 import '../room_intro/room_intro_screen.dart';
+import '../game/room_lobby_screen.dart';
 
 // ─── Radar Painter ───────────────────────────────────────────────────────────
 class _RadarPainter extends CustomPainter {
@@ -458,7 +459,71 @@ class _MatchmakingScreenState extends ConsumerState<MatchmakingScreen>
                               .animate()
                               .fadeIn(delay: 800.ms),
 
-                        const SizedBox(height: 36),
+                        const SizedBox(height: 28),
+
+                        // ── Join by Code button & Lobby button ─────────
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            GlassButton(
+                              onTap: () => _showJoinByCodeDialog(context),
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                              borderRadius: 14,
+                              gradient: AppColors.primaryGradient,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.pin_rounded, color: Colors.white, size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'ادخل بكود الغرفة',
+                                    style: GoogleFonts.cairo(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (_roomId != null && player != null) ...[
+                              const SizedBox(width: 12),
+                              GlassButton(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => RoomLobbyScreen(
+                                        roomId: _roomId!,
+                                        currentPlayer: player,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                borderRadius: 14,
+                                gradient: AppColors.warmGradient,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.meeting_room_rounded, color: Colors.white, size: 18),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'اللوبي والكود',
+                                      style: GoogleFonts.cairo(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ).animate().fadeIn(delay: 850.ms).slideY(begin: 0.2),
+
+                        const SizedBox(height: 20),
 
                         // ── Cancel button ───────────────────────────────
                         _buildCancelButton()
@@ -726,6 +791,105 @@ class _MatchmakingScreenState extends ConsumerState<MatchmakingScreen>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showJoinByCodeDialog(BuildContext context) {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text(
+          'ادخل كود الغرفة',
+          style: GoogleFonts.cairo(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'اكتب الكود المكون من 6 أرقام للانضمام لأصحابك',
+              style: GoogleFonts.cairo(color: AppColors.textSecondary, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: ctrl,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.cairo(
+                fontSize: 26,
+                letterSpacing: 8,
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w800,
+              ),
+              decoration: InputDecoration(
+                hintText: '••••••',
+                counterText: '',
+                hintStyle: GoogleFonts.cairo(color: AppColors.textHint, letterSpacing: 8),
+                filled: true,
+                fillColor: AppColors.cardBackground,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppColors.primary),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('إلغاء', style: GoogleFonts.cairo(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () async {
+              final codeText = ctrl.text.trim();
+              if (codeText.length != 6) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('الكود يجب أن يتكون من 6 أرقام', style: GoogleFonts.cairo()),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
+              final player = ref.read(currentPlayerProvider);
+              if (player == null) return;
+              try {
+                final roomId = await ref.read(roomServiceProvider).joinRoomByCode(codeText, player);
+                if (!context.mounted) return;
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => RoomLobbyScreen(
+                      roomId: roomId,
+                      currentPlayer: player,
+                    ),
+                  ),
+                );
+              } catch (e) {
+                if (!context.mounted) return;
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('$e', style: GoogleFonts.cairo()),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
+            },
+            child: Text('دخول', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }

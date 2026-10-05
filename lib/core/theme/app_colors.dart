@@ -6,6 +6,7 @@ class AppColors {
   static const Color background = Color(0xFF0D0D1A);
   static const Color surface = Color(0xFF13132A);
   static const Color surfaceLight = Color(0xFF1C1C38);
+  static const Color cardBackground = Color(0xFF1C1C38);
 
   // الألوان الأساسية
   static const Color primary = Color(0xFF7B5EA7);      // بنفسجي
@@ -22,6 +23,7 @@ class AppColors {
   static const Color normal = Color(0xFF6BB5C8);       // أزرق هادئ - الشخص العادي
   static const Color success = Color(0xFF6BC8A0);      // أخضر للنجاح
   static const Color warning = Color(0xFFF0C070);      // أصفر للتحذير
+  static const Color error = Color(0xFFE8758A);        // أحمر/وردي للأخطاء
   static const Color accentLight = Color(0xFF00CEC9);  // تركواز مريح
 
   // النصوص

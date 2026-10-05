@@ -40,6 +40,7 @@ class PlayerAnswer {
 
 class RoomModel {
   final String roomId;
+  final String code; // كود الغرفة المكون من 6 أرقام
   final List<PlayerModel> players;
   final RoomStatus status;
   final int currentQuestionIndex;
@@ -53,6 +54,7 @@ class RoomModel {
 
   const RoomModel({
     required this.roomId,
+    this.code = '',
     required this.players,
     required this.status,
     required this.currentQuestionIndex,
@@ -85,6 +87,7 @@ class RoomModel {
     final data = doc.data() as Map<String, dynamic>;
     return RoomModel(
       roomId: doc.id,
+      code: data['code'] as String? ?? '',
       players: (data['players'] as List<dynamic>?)
           ?.map((p) => PlayerModel.fromMap(p as Map<String, dynamic>))
           .toList() ?? [],
@@ -103,6 +106,7 @@ class RoomModel {
   }
 
   Map<String, dynamic> toFirestore() => {
+    'code': code,
     'players': players.map((p) => p.toMap()).toList(),
     'status': _statusToString(status),
     'currentQuestionIndex': currentQuestionIndex,
@@ -137,6 +141,7 @@ class RoomModel {
 
   RoomModel copyWith({
     String? roomId,
+    String? code,
     List<PlayerModel>? players,
     RoomStatus? status,
     int? currentQuestionIndex,
@@ -150,6 +155,7 @@ class RoomModel {
   }) {
     return RoomModel(
       roomId: roomId ?? this.roomId,
+      code: code ?? this.code,
       players: players ?? this.players,
       status: status ?? this.status,
       currentQuestionIndex: currentQuestionIndex ?? this.currentQuestionIndex,

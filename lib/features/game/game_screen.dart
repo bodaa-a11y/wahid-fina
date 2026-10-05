@@ -10,6 +10,8 @@ import '../../core/widgets/glass_card.dart';
 import '../../core/providers/providers.dart';
 import '../../core/models/player_model.dart';
 import '../../core/models/room_model.dart';
+import '../../core/widgets/doctor_robot_widget.dart';
+import '../../core/services/tts_service.dart';
 import '../results/results_screen.dart';
 
 class GameScreen extends ConsumerStatefulWidget {
@@ -35,6 +37,8 @@ class _GameScreenState extends ConsumerState<GameScreen>
   int _lastProcessedQuestion = -1;
   bool _isProcessingTransition = false;
   StreamSubscription? _roomSub;
+  bool _isSpeaking = false;
+  bool _firstQuestionSpoken = false;
 
   @override
   void initState() {
@@ -52,10 +56,16 @@ class _GameScreenState extends ConsumerState<GameScreen>
       duration: const Duration(milliseconds: 800),
     );
     _questionController.forward();
+
+    final tts = ref.read(ttsServiceProvider);
+    tts.onSpeakingChanged = (v) {
+      if (mounted) setState(() => _isSpeaking = v);
+    };
   }
 
   @override
   void dispose() {
+    ref.read(ttsServiceProvider).stop();
     _questionController.dispose();
     _answersRevealController.dispose();
     _aiCommentController.dispose();
@@ -68,6 +78,12 @@ class _GameScreenState extends ConsumerState<GameScreen>
     _questionController.forward();
     _answersRevealController.reset();
     _aiCommentController.reset();
+
+    // 🎙️ نطق السؤال الجديد
+    final room = ref.read(roomStreamProvider(widget.roomId)).value;
+    if (room != null && room.currentQuestionIndex < room.questions.length) {
+      ref.read(ttsServiceProvider).speakQuestion(room.questions[room.currentQuestionIndex]);
+    }
   }
 
   Future<void> _handleAllAnswered(RoomModel room) async {
@@ -147,6 +163,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
           WidgetsBinding.instance.addPostFrameCallback((_) => _handleAllAnswered(room));
         }
 
+        if (!_firstQuestionSpoken && room.questions.isNotEmpty) {
+          _firstQuestionSpoken = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              ref.read(ttsServiceProvider).speakQuestion(room.questions[room.currentQuestionIndex]);
+            }
+          });
+        }
+
         final currentQuestion = room.questions.isNotEmpty && room.currentQuestionIndex < room.questions.length
             ? room.questions[room.currentQuestionIndex]
             : '';
@@ -172,11 +197,17 @@ class _GameScreenState extends ConsumerState<GameScreen>
                         children: [
                           const SizedBox(height: 8),
 
-                          // السؤال
-                          _buildQuestionCard(currentQuestion, room.currentQuestionIndex, room.questions.length)
-                              .animate(controller: _questionController)
-                              .fadeIn(duration: 400.ms)
-                              .slideY(begin: 0.3, end: 0, duration: 500.ms, curve: Curves.easeOutBack),
+                          // 🤖 الدكتور فوق + فقاعة السؤال
+                          Column(
+                            children: [
+                              DoctorRobotWidget(speaking: _isSpeaking, size: 150),
+                              const SizedBox(height: 4),
+                              _buildQuestionBubble(currentQuestion, room.currentQuestionIndex, room.questions.length)
+                                  .animate(controller: _questionController)
+                                  .fadeIn(duration: 400.ms)
+                                  .slideY(begin: 0.3, end: 0, duration: 500.ms, curve: Curves.easeOutBack),
+                            ],
+                          ),
 
                           const SizedBox(height: 16),
 
@@ -323,14 +354,16 @@ class _GameScreenState extends ConsumerState<GameScreen>
     );
   }
 
-  Widget _buildQuestionCard(String question, int index, int total) {
-    return GlassCard(
-      gradient: AppColors.cardGradient,
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+  Widget _buildQuestionBubble(String question, int index, int total) {
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.topCenter,
+      children: [
+        // الفقاعة
+        GlassCard(
+          gradient: AppColors.cardGradient,
+          padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
+          child: Column(
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -348,21 +381,28 @@ class _GameScreenState extends ConsumerState<GameScreen>
                   ),
                 ),
               ),
+              const SizedBox(height: 14),
+              _TypewriterText(
+                text: question,
+                style: GoogleFonts.cairo(
+                  color: AppColors.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  height: 1.6,
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            question,
-            style: GoogleFonts.cairo(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              height: 1.6,
-            ),
-            textAlign: TextAlign.right,
+        ),
+        // ذيل الفقاعة (مثلث فوق)
+        Positioned(
+          top: -9,
+          child: CustomPaint(
+            size: const Size(20, 12),
+            painter: _BubbleTailPainter(color: Colors.white.withOpacity(0.12)),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -784,4 +824,71 @@ class _WriteAnswerFieldState extends State<_WriteAnswerField> {
             ),
     );
   }
+}
+
+// ✍️ تأثير الكتابة الحية على السؤال
+class _TypewriterText extends StatefulWidget {
+  final String text;
+  final TextStyle style;
+  const _TypewriterText({required this.text, required this.style});
+
+  @override
+  State<_TypewriterText> createState() => _TypewriterTextState();
+}
+
+class _TypewriterTextState extends State<_TypewriterText> {
+  String _shown = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _type();
+  }
+
+  @override
+  void didUpdateWidget(covariant _TypewriterText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text) {
+      _shown = '';
+      _type();
+    }
+  }
+
+  Future<void> _type() async {
+    for (int i = 0; i < widget.text.characters.length; i++) {
+      if (!mounted) return;
+      await Future.delayed(const Duration(milliseconds: 28));
+      if (!mounted) return;
+      setState(() => _shown = widget.text.characters.take(i + 1).toString());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      _shown,
+      style: widget.style,
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.rtl,
+    );
+  }
+}
+
+class _BubbleTailPainter extends CustomPainter {
+  final Color color;
+  _BubbleTailPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color;
+    final p = Path()
+      ..moveTo(size.width / 2 - 8, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..lineTo(size.width / 2 + 8, 0)
+      ..close();
+    canvas.drawPath(p, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
