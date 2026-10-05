@@ -12,6 +12,7 @@ import '../../core/providers/providers.dart';
 import '../../core/models/player_model.dart';
 import '../../core/widgets/glass_card.dart';
 import '../auth/register_screen.dart';
+import '../game/room_screen.dart';
 import '../matchmaking/matchmaking_screen.dart';
 import '../one_to_one/one_to_one_matchmaking_screen.dart';
 import '../one_to_one/one_to_one_profile_screen.dart';
@@ -121,7 +122,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void _navigateToMatchmaking() {
     Navigator.of(context).push(
       PageRouteBuilder(
-        pageBuilder: (_, animation, __) => const MatchmakingScreen(),
+        pageBuilder: (_, animation, __) => const RoomScreen(),
         transitionsBuilder: (_, animation, __, child) => FadeTransition(
           opacity: animation,
           child: child,
