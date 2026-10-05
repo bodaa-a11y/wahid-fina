@@ -16,6 +16,7 @@ import '../game/room_screen.dart';
 import '../matchmaking/matchmaking_screen.dart';
 import '../one_to_one/one_to_one_matchmaking_screen.dart';
 import '../one_to_one/one_to_one_profile_screen.dart';
+import '../vault/support_vault_screen.dart';
 
 // ---------------------------------------------------------------------------
 // HomeScreen
@@ -273,28 +274,55 @@ class _ReturningUserView extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Profile button
-              if (player != null)
-                IconButton(
-                  icon: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.06),
-                      border: Border.all(color: Colors.white.withOpacity(0.12)),
-                    ),
-                    child: const Icon(Icons.person_outline_rounded, color: Colors.white, size: 24),
-                  ),
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => OneToOneProfileScreen(uid: player.id),
+              // Profile and Support Vault buttons
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (player != null)
+                    IconButton(
+                      icon: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.06),
+                          border: Border.all(color: Colors.white.withOpacity(0.12)),
+                        ),
+                        child: const Icon(Icons.person_outline_rounded, color: Colors.white, size: 24),
                       ),
-                    );
-                  },
-                ),
+                      tooltip: 'الملف الشخصي',
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => OneToOneProfileScreen(uid: player.id),
+                          ),
+                        );
+                      },
+                    ),
+                  IconButton(
+                    icon: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.amber.withOpacity(0.15),
+                        border: Border.all(color: Colors.amber.withOpacity(0.35)),
+                      ),
+                      child: const Icon(Icons.mark_email_read_outlined, color: Colors.amberAccent, size: 22),
+                    ),
+                    tooltip: 'صندوق الدعم 📬',
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SupportVaultScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
               // Welcome badge
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

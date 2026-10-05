@@ -791,12 +791,145 @@ class GameQuestionsBank {
     ),
   ];
 
-  /// يختار 10 أسئلة متدرجة تماماً وفق وثيقة التصميم:
-  /// 3 خفيف (1-10) + 4 متوسط (11-20) + 3 عميق (21-30)
-  static List<QuestionData> getStagedQuestions() {
+  /// بنك أسئلة القصص الخمس الخاصة (F10 رومات نفس الحكاية)
+  static final Map<String, List<QuestionData>> storyQuestions = {
+    'loss': [
+      QuestionData(
+        id: 101,
+        level: QuestionLevel.deep,
+        question: 'إيه الحاجة اللي بتفتكرها أول ما تفتكر حد غالي راح عن دنيانا؟',
+        personaAnswers: {
+          'supporter': ['ضحكته وصوته وهو بيطمني في أصعب الأوقات', 'دعواته اللي كانت دايماً في ضهري'],
+          'wise': ['أثره الطيب اللي سابه جوانا ومكمل معانا لحد النهاردة'],
+          'rain-hidden': ['حضنه الدافي اللي مفتقده ومش لاقي زيه في أي مكان'],
+        },
+      ),
+      QuestionData(
+        id: 102,
+        level: QuestionLevel.deep,
+        question: 'إيه أكتر ذكرى دافية بتهون عليك وجع الغياب؟',
+        personaAnswers: {
+          'supporter': ['قعدتنا سوا يوم الجمعة وسوالفنا البسيطة', 'مكالمة عفوية سأل فيها عليا من غير سبب'],
+          'wise': ['إن المحبة الحقيقية عمرها ما بتموت وبتفضل حية في القلب'],
+          'rain-hidden': ['آخر مرة قالي فيها "خلي بالك من نفسك" بنظرة مش هنساها'],
+        },
+      ),
+      QuestionData(
+        id: 103,
+        level: QuestionLevel.deep,
+        question: 'لو تقدر تبعتله رسالة من كلمة واحدة دلوقتي، هتكون إيه؟',
+        personaAnswers: {
+          'supporter': ['وحشتني أوي ومستنيك في الجنة', 'شكراً على كل ذكرى حلوة عشتها معاك'],
+          'wise': ['سلام لروحك الطاهرة أينما كنت'],
+          'rain-hidden': ['سامحني لو قصرت في حقك في يوم'],
+        },
+      ),
+    ],
+    'exams': [
+      QuestionData(
+        id: 104,
+        level: QuestionLevel.deep,
+        question: 'إيه أكتر فكرة بتطاردك قبل النوم بخصوص الامتحانات والدراسة؟',
+        personaAnswers: {
+          'supporter': ['خوف إني أخيب أمل أهلي اللي تعبوا عليا', 'إني أنسى المجهود اللي بذلته في لحظة التوتر'],
+          'wise': ['السعي هو اللي علينا والنتيجة والرزق بإيد ربنا دايماً'],
+          'rain-hidden': ['إني أطلع ولا حاجة بعد كل التعب والسهر ده'],
+        },
+      ),
+      QuestionData(
+        id: 105,
+        level: QuestionLevel.deep,
+        question: 'مين الشخص اللي وجوده بيقلل من توترك في وقت الضغط؟',
+        personaAnswers: {
+          'supporter': ['صاحبي اللي بيهون عليا بالمكالمات والضحك', 'أمي لما بتطبطب عليا وتدعيلي'],
+          'wise': ['حد هادي بيسمعني من غير ما يحكم عليا أو يضغطني أكتر'],
+          'rain-hidden': ['للأسف حاسس إني بمر بالضغط ده لوحدي تماماً'],
+        },
+      ),
+    ],
+    'future': [
+      QuestionData(
+        id: 106,
+        level: QuestionLevel.deep,
+        question: 'إيه أكتر خوف بخصوص بكرة والشغل نفسك تتخلص منه؟',
+        personaAnswers: {
+          'supporter': ['الخوف من الفشل وإني ملاقيش طريقي', 'التردد في اتخاذ قرارات مصيرية'],
+          'wise': ['إن بكرة مش بإيدينا، والتركيز على خطوة النهاردة هو الحل'],
+          'rain-hidden': ['إني أفضل مكاني والوقت يجري بيا وأنا مش قادر أتحرك'],
+        },
+      ),
+      QuestionData(
+        id: 107,
+        level: QuestionLevel.deep,
+        question: 'هل حاسس إنك متأخر عن زمايلك؟ وإيه اللي بيفكرك إن لكل واحد وقته؟',
+        personaAnswers: {
+          'supporter': ['كل زهرة بتفتح في معادها، والمقارنة بتسرق الفرحة', 'أحياناً بحس بكده بس بستعيذ من المقارنة'],
+          'wise': ['مفيش حد متأخر في توقيت ربنا الخاص ليه'],
+          'rain-hidden': ['بحس بكده كل يوم، وده بيهد طاقتي وعزيمتي'],
+        },
+      ),
+    ],
+    'lonely': [
+      QuestionData(
+        id: 108,
+        level: QuestionLevel.deep,
+        question: 'إيه أكتر لحظة بتحس فيها بالغربة حتى لو حواليك ناس؟',
+        personaAnswers: {
+          'supporter': ['لما أكون وسط لمة بس مفيش حد فهمني بجد', 'آخر الليل لما تنطفي الأنوار'],
+          'wise': ['الغربة شعور داخلي بيزول لما نتقبل أنفسنا بصدق'],
+          'rain-hidden': ['لما أكون موجوع ومضطر أبتسم عشان محدش يسأل مالك'],
+        },
+      ),
+      QuestionData(
+        id: 109,
+        level: QuestionLevel.deep,
+        question: 'إيه الحاجة اللي بتعملها عشان تطبطب على نفسك في وحدتك؟',
+        personaAnswers: {
+          'supporter': ['مشروب دافي وكتاب ممتع في ركن هادي', 'أسمع قرآن أو مزيكا تطمن قلبي'],
+          'wise': ['الكتابة وتفريغ المشاعر على ورق أبيض'],
+          'rain-hidden': ['بسيب نفسي للدموع لحد ما أنام وأرتاح شوية'],
+        },
+      ),
+    ],
+    'heartbreak': [
+      QuestionData(
+        id: 110,
+        level: QuestionLevel.deep,
+        question: 'إيه الجرح اللي حاسس إنه غيّر فيك جزء للأبد؟',
+        personaAnswers: {
+          'supporter': ['خيبة الأمل في شخص كنت مديله أمان مطلق', 'التعود على البعد بعد القرب الشديد'],
+          'wise': ['الجروح بتعلمنا نحط حدود صحية ونحب نفسنا أكتر'],
+          'rain-hidden': ['ثقتي في الناس اللي اتهزت وبقيت خايف من أي قرب جديد'],
+        },
+      ),
+      QuestionData(
+        id: 111,
+        level: QuestionLevel.deep,
+        question: 'إيه أكتر حاجة اتعلمتها عن نفسك بعد ما عشت الوجع؟',
+        personaAnswers: {
+          'supporter': ['إني أقوى مما كنت متخيل وإن قلبي كبير لسه', 'إن قيمتي مش معتمدة على رأي حد فيا'],
+          'wise': ['إن الألم معلم قاسي لكنه بيصقل الروح بالنضج'],
+          'rain-hidden': ['إني لسه بحن وبضعف مهما حاولت أبين إني قوي'],
+        },
+      ),
+    ],
+  };
+
+  /// سحب 10 أسئلة: 7 عامة متدرجة + 3 أسئلة خاصة بالقصة إن وجدت
+  static List<QuestionData> getStagedQuestions({String? story}) {
     final light = allQuestions.where((q) => q.level == QuestionLevel.light).toList()..shuffle();
     final mid = allQuestions.where((q) => q.level == QuestionLevel.mid).toList()..shuffle();
     final deep = allQuestions.where((q) => q.level == QuestionLevel.deep).toList()..shuffle();
+
+    if (story != null && storyQuestions.containsKey(story)) {
+      final storyList = List<QuestionData>.from(storyQuestions[story]!)..shuffle();
+      return [
+        ...light.take(3),
+        ...mid.take(4),
+        ...storyList.take(2),
+        ...deep.take(1),
+      ];
+    }
 
     return [
       ...light.take(3),

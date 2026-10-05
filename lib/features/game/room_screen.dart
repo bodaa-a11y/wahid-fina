@@ -9,6 +9,9 @@ import '../../core/widgets/glass_card.dart';
 import '../../core/constants/game_questions.dart';
 import 'room_controller.dart';
 import '../one_to_one/one_to_one_chat_screen.dart';
+import '../../core/models/care_tree_model.dart';
+import '../../core/widgets/care_tree_widget.dart';
+import '../vault/support_vault_screen.dart';
 
 class RoomScreen extends ConsumerStatefulWidget {
   const RoomScreen({super.key});
@@ -20,8 +23,22 @@ class RoomScreen extends ConsumerStatefulWidget {
 class _RoomScreenState extends ConsumerState<RoomScreen> {
   final TextEditingController _answerController = TextEditingController();
   final TextEditingController _supportController = TextEditingController();
-  bool? _selectedRoleIsRain;
+  int? _selectedRoleMode; // 0: rain, 1: supporter, 2: notAlone (F4)
+  String? _selectedStory; // null = عام, or 'loss', 'exams', 'future', 'lonely', 'heartbreak' (F10)
   String? _selectedVoteAlias;
+  CareTreeModel _careTree = const CareTreeModel(stage: 1, leaves: 4, fruits: 2, stars: 2);
+  bool _earthVoiceEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTree();
+  }
+
+  Future<void> _loadTree() async {
+    final t = await CareTreeStorage.loadTree();
+    if (mounted) setState(() => _careTree = t);
+  }
 
   @override
   void dispose() {
@@ -102,45 +119,84 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
 
   // ── الشاشة 1: تسجيل الدخول / اختيار الدور ────────────────────────────────────
   Widget _buildRoleSelectionView(RoomController controller) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
           Text(
             'أنت جاي النهاردة عشان…',
             textAlign: TextAlign.center,
             style: GoogleFonts.cairo(
-              fontSize: 26,
+              fontSize: 24,
               fontWeight: FontWeight.w800,
               color: Colors.white,
             ),
           ).animate().fadeIn().slideY(begin: -0.1),
-          const SizedBox(height: 36),
+          const SizedBox(height: 24),
 
-          // بطاقة 1: محتاج أحس إن في حد سامعني
+          // بطاقة 1: محتاج أحس إن في حد سامعني (صاحب المطر المتخفي)
           _buildRoleChoiceCard(
-            title: 'محتاج أحس إن في حد سامعني',
+            title: 'محتاج أحس إن في حد سامعني 🌧️',
             subtitle: 'مش لازم تشرح كل حاجة.. وجودك كفاية',
             icon: Icons.water_drop_rounded,
             color: const Color(0xFF00CEC9),
-            isSelected: _selectedRoleIsRain == true,
-            onTap: () => setState(() => _selectedRoleIsRain = true),
+            isSelected: _selectedRoleMode == 0,
+            onTap: () => setState(() => _selectedRoleMode = 0),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
 
-          // بطاقة 2: محتاج أدعم حد وأسمعه
+          // بطاقة 2: محتاج أدعم حد وأسمعه (الداعم)
           _buildRoleChoiceCard(
-            title: 'محتاج أدعم حد وأسمعه',
+            title: 'محتاج أدعم حد وأسمعه ☀️',
             subtitle: 'كن سنداً ودافع أمل لشخص في الروم',
             icon: Icons.wb_sunny_rounded,
             color: const Color(0xFFFDCB6E),
-            isSelected: _selectedRoleIsRain == false,
-            onTap: () => setState(() => _selectedRoleIsRain = false),
+            isSelected: _selectedRoleMode == 1,
+            onTap: () => setState(() => _selectedRoleMode = 1),
+          ),
+          const SizedBox(height: 12),
+
+          // بطاقة 3: وضع اليد الممدودة (F4)
+          _buildRoleChoiceCard(
+            title: 'عايز أتكلم… ويسمعوني من غير ألغاز 🤝',
+            subtitle: 'محدش هيخمّ عليك. الكل هيسمعك من الأول بدون تصويت',
+            icon: Icons.volunteer_activism_rounded,
+            color: const Color(0xFFA29BFE),
+            isSelected: _selectedRoleMode == 2,
+            onTap: () => setState(() => _selectedRoleMode = 2),
           ),
 
-          const Spacer(),
+          const SizedBox(height: 24),
+
+          // اختيار نوع الروم وقصة التجربة (F10 رومات نفس الحكاية)
+          Row(
+            children: [
+              const Icon(Icons.auto_stories_rounded, color: AppColors.accentLight, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'نوع الروم وتجربة المشاركة:',
+                style: GoogleFonts.cairo(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildStoryFilterChip('🔀 روم عام', null),
+                _buildStoryFilterChip('🕊️ فقدان حد قريب', 'loss'),
+                _buildStoryFilterChip('📚 ضغوط دراسة', 'exams'),
+                _buildStoryFilterChip('💼 قلق المستقبل', 'future'),
+                _buildStoryFilterChip('🌍 وحدة وغربة', 'lonely'),
+                _buildStoryFilterChip('💔 قلب مجروح', 'heartbreak'),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
 
           Text(
             'اختيارك سرّي تماماً 🤍 محدش في أي روم هيعرف غيرك.',
@@ -150,14 +206,18 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
               color: Colors.white54,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           ElevatedButton(
-            onPressed: _selectedRoleIsRain == null
+            onPressed: _selectedRoleMode == null
                 ? null
                 : () {
                     HapticFeedback.mediumImpact();
-                    controller.selectRoleAndMatch(_selectedRoleIsRain!);
+                    controller.selectRoleAndMatch(
+                      wantsRainRole: _selectedRoleMode == 0,
+                      isNotAloneMode: _selectedRoleMode == 2,
+                      story: _selectedStory,
+                    );
                   },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -173,6 +233,29 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
           ),
           const SizedBox(height: 16),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStoryFilterChip(String label, String? value) {
+    final isSelected = (_selectedStory == value);
+    return Padding(
+      padding: const EdgeInsets.only(left: 8),
+      child: FilterChip(
+        selected: isSelected,
+        label: Text(label),
+        labelStyle: GoogleFonts.cairo(
+          color: isSelected ? Colors.white : Colors.white60,
+          fontSize: 12,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+        backgroundColor: Colors.white.withOpacity(0.04),
+        selectedColor: AppColors.primary.withOpacity(0.3),
+        checkmarkColor: AppColors.accentLight,
+        side: BorderSide(
+          color: isSelected ? AppColors.accentLight : Colors.white12,
+        ),
+        onSelected: (_) => setState(() => _selectedStory = value),
       ),
     );
   }
@@ -503,7 +586,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
 
     return Column(
       children: [
-        // AppBar مع مؤشر الجولة والتايمر
+        // AppBar مع مؤشر الجولة والتايمر وصوت الأرض (F8)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Row(
@@ -517,27 +600,55 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
                   fontSize: 16,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white12),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.timer_outlined, size: 16, color: AppColors.warm),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${state.timerSeconds} ث',
-                      style: GoogleFonts.cairo(
-                        color: AppColors.warm,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+              Row(
+                children: [
+                  // F8: صوت الأرض في الجولات العميقة 8-10
+                  if (state.currentRound >= 7) ...[
+                    IconButton(
+                      icon: Icon(
+                        _earthVoiceEnabled ? Icons.waves_rounded : Icons.waves_outlined,
+                        color: _earthVoiceEnabled ? AppColors.accentLight : Colors.white38,
+                        size: 20,
                       ),
+                      tooltip: _earthVoiceEnabled ? 'صوت الأرض مفعّل 🌊' : 'صوت الأرض متوقف',
+                      onPressed: () {
+                        setState(() => _earthVoiceEnabled = !_earthVoiceEnabled);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            duration: const Duration(seconds: 1),
+                            content: Text(
+                              _earthVoiceEnabled ? 'صوت الأرض مفعّل بهدوء 🌊' : 'تم إيقاف صوت الأرض',
+                              style: GoogleFonts.cairo(),
+                            ),
+                          ),
+                        );
+                      },
                     ),
+                    const SizedBox(width: 4),
                   ],
-                ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.timer_outlined, size: 16, color: AppColors.warm),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${state.timerSeconds} ث',
+                          style: GoogleFonts.cairo(
+                            color: AppColors.warm,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -1015,7 +1126,76 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
             textAlign: TextAlign.center,
             style: GoogleFonts.cairo(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
+
+          // F3: شجرة الدعم الحية الخاصة باللاعب
+          CareTreeWidget(tree: _careTree),
+          const SizedBox(height: 18),
+
+          // F4: وسام وضع اليد الممدودة ومضاعفة النقاط
+          if (state.isNotAloneMode) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFA29BFE).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFA29BFE), width: 1.2),
+              ),
+              child: Row(
+                children: [
+                  const Text('🤝', style: TextStyle(fontSize: 20)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'وضع اليد الممدودة: تم مضاعفة نقاط تعاطفك (×2) لشجاعتك وصدقك 🤍',
+                      style: GoogleFonts.cairo(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // F2: بطاقة "نفس الموجة" (Resonance Match)
+          if (state.resonancePairAlias != null) ...[
+            GestureDetector(
+              onTap: () => _showResonanceBottomSheet(context, state.resonancePairAlias!),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFF6C5CE7), Color(0xFFA29BFE)]),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(color: Colors.purple.withOpacity(0.3), blurRadius: 14, spreadRadius: 1),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const Text('⚡', style: TextStyle(fontSize: 24)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'نفس الموجة مع ${state.resonancePairAlias}!',
+                            style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          Text(
+                            'إجاباتكم وتفاعلاتكم تقاربت جداً.. اضغط لفتح فضفضة خاصة',
+                            style: GoogleFonts.cairo(color: Colors.white70, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 14),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
 
           // 3 بطاقات جوائز
           _buildAwardCard(
@@ -1040,7 +1220,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
             desc: 'حافظ على غموضه وأجاب بصدق',
             color: const Color(0xFF00CEC9),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           // رصيد النقاط
           GlassCard(
@@ -1064,7 +1244,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
           ElevatedButton(
             onPressed: () => controller.goToPostRoom(),
@@ -1215,6 +1395,24 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
             ),
           ),
 
+          // F1: زر فتح صندوق الدعم
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SupportVaultScreen()),
+              );
+            },
+            icon: const Icon(Icons.mark_email_read_outlined, color: AppColors.accentLight),
+            label: Text('📬 فتح صندوق الدعم (رسائلك المحفوظة)', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: AppColors.accentLight),
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+          ),
+          const SizedBox(height: 10),
+
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
@@ -1227,6 +1425,72 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
           ),
           const SizedBox(height: 12),
         ],
+      ),
+    );
+  }
+
+  // F2: نافذة نفس الموجة (Resonance Bottom Sheet)
+  void _showResonanceBottomSheet(BuildContext context, String partnerAlias) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: const BoxDecoration(
+            color: Color(0xFF1E1A38),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 18),
+              const Text('⚡', style: TextStyle(fontSize: 40)),
+              const SizedBox(height: 10),
+              Text(
+                'نفس الموجة! إجاباتكم اتقاربت أوي',
+                style: GoogleFonts.cairo(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'تفاعلاتكم ومشاعرك تقاطعت أكتر من 3 مرات مع $partnerAlias خلال الروم 🤍',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.cairo(color: Colors.white70, fontSize: 13, height: 1.5),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => OneToOneChatScreen(
+                        roomId: 'resonance_${partnerAlias}_${DateTime.now().millisecondsSinceEpoch}',
+                        currentUserId: 'me',
+                        currentUserNickname: 'نور',
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.chat_bubble_rounded),
+                label: Text('افتح فضفضة خاصة (1-on-1)', style: GoogleFonts.cairo(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('بعدين', style: GoogleFonts.cairo(color: Colors.white38)),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

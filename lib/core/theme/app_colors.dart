@@ -22,6 +22,7 @@ class AppColors {
   static const Color normal = Color(0xFF6BB5C8);       // أزرق هادئ - الشخص العادي
   static const Color success = Color(0xFF6BC8A0);      // أخضر للنجاح
   static const Color warning = Color(0xFFF0C070);      // أصفر للتحذير
+  static const Color accentLight = Color(0xFF00CEC9);  // تركواز مريح
 
   // النصوص
   static const Color textPrimary = Color(0xFFE8E6F0);

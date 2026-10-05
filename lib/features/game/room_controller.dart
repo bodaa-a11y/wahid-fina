@@ -2,10 +2,13 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/game_questions.dart';
 import '../../core/services/bot_engine.dart';
 import '../../core/models/player_model.dart';
+import '../../core/models/vault_message_model.dart';
+import '../../core/models/care_tree_model.dart';
 
 enum RoomPhase {
   roleSelection, // الشاشة 1
@@ -49,6 +52,8 @@ class RoomState {
   final RoomPhase phase;
   final String myAlias;
   final bool isMyRoleRain;
+  final bool isNotAloneMode; // وضع اليد الممدودة (F4)
+  final String? selectedStory; // رومات نفس الحكاية (F10)
   final List<RoomPlayerInfo> players;
   final List<QuestionData> questions;
   final int currentRound; // 0 to 9 (1 to 10)
@@ -64,12 +69,15 @@ class RoomState {
   final String? bestGuesserAlias;
   final String? bestSupporterAlias;
   final String? bestCamouflageAlias;
+  final String? resonancePairAlias; // نفس الموجة (F2)
   final bool crisisDetected;
 
   const RoomState({
     required this.phase,
     required this.myAlias,
     required this.isMyRoleRain,
+    this.isNotAloneMode = false,
+    this.selectedStory,
     required this.players,
     required this.questions,
     this.currentRound = 0,
@@ -85,6 +93,7 @@ class RoomState {
     this.bestGuesserAlias,
     this.bestSupporterAlias,
     this.bestCamouflageAlias,
+    this.resonancePairAlias,
     this.crisisDetected = false,
   });
 
@@ -92,6 +101,8 @@ class RoomState {
     RoomPhase? phase,
     String? myAlias,
     bool? isMyRoleRain,
+    bool? isNotAloneMode,
+    String? selectedStory,
     List<RoomPlayerInfo>? players,
     List<QuestionData>? questions,
     int? currentRound,
@@ -107,12 +118,15 @@ class RoomState {
     String? bestGuesserAlias,
     String? bestSupporterAlias,
     String? bestCamouflageAlias,
+    String? resonancePairAlias,
     bool? crisisDetected,
   }) {
     return RoomState(
       phase: phase ?? this.phase,
       myAlias: myAlias ?? this.myAlias,
       isMyRoleRain: isMyRoleRain ?? this.isMyRoleRain,
+      isNotAloneMode: isNotAloneMode ?? this.isNotAloneMode,
+      selectedStory: selectedStory ?? this.selectedStory,
       players: players ?? this.players,
       questions: questions ?? this.questions,
       currentRound: currentRound ?? this.currentRound,
@@ -128,6 +142,7 @@ class RoomState {
       bestGuesserAlias: bestGuesserAlias ?? this.bestGuesserAlias,
       bestSupporterAlias: bestSupporterAlias ?? this.bestSupporterAlias,
       bestCamouflageAlias: bestCamouflageAlias ?? this.bestCamouflageAlias,
+      resonancePairAlias: resonancePairAlias ?? this.resonancePairAlias,
       crisisDetected: crisisDetected ?? this.crisisDetected,
     );
   }
@@ -154,9 +169,15 @@ class RoomController extends StateNotifier<RoomState> {
   }
 
   // ── 1. اختيار الدور والدخول في المطابقة ────────────────────────────────────
-  void selectRoleAndMatch(bool wantsRainRole) {
+  void selectRoleAndMatch({
+    required bool wantsRainRole,
+    bool isNotAloneMode = false,
+    String? story,
+  }) {
     state = state.copyWith(
-      isMyRoleRain: wantsRainRole,
+      isMyRoleRain: wantsRainRole || isNotAloneMode,
+      isNotAloneMode: isNotAloneMode,
+      selectedStory: story,
       phase: RoomPhase.matching,
       timerSeconds: 15,
       myAlias: 'نور',
@@ -164,7 +185,7 @@ class RoomController extends StateNotifier<RoomState> {
         RoomPlayerInfo(
           alias: 'نور',
           isHuman: true,
-          isRain: wantsRainRole,
+          isRain: wantsRainRole || isNotAloneMode,
           color: const Color(0xFF6C5CE7),
         ),
       ],
@@ -186,8 +207,8 @@ class RoomController extends StateNotifier<RoomState> {
   void _fillWithBotsAndEnterLobby() {
     _countdownTimer?.cancel();
 
-    // اختيار أسئلة متدرجة الـ 10
-    final stagedQuestions = GameQuestionsBank.getStagedQuestions();
+    // اختيار أسئلة متدرجة الـ 10 (مع الأسئلة الخاصة بالقصة إن وُجدت F10)
+    final stagedQuestions = GameQuestionsBank.getStagedQuestions(story: state.selectedStory);
 
     // توليد 5 بوتات لتكملة الـ 6
     _bots = BotEngine.generateBots(
@@ -374,7 +395,12 @@ class RoomController extends StateNotifier<RoomState> {
           if (state.currentRound < 9) {
             _startQuestionRound(state.currentRound + 1);
           } else {
-            _startVotingPhase();
+            // في وضع اليد الممدودة F4، نتخطى التصويت والكشف ونبدأ الدعم مباشرة
+            if (state.isNotAloneMode) {
+              _startSupportPhase();
+            } else {
+              _startVotingPhase();
+            }
           }
         }
       });
@@ -464,6 +490,9 @@ class RoomController extends StateNotifier<RoomState> {
   void _finalizeVotesAndReveal() {
     _countdownTimer?.cancel();
 
+    // اهتزاز حسي لطيف بدون أي صوت خسارة (F6)
+    HapticFeedback.mediumImpact();
+
     final rainAlias = state.rainPlayerAlias ?? 'قمر';
     final rainAnswers = _allAnswersHistory[rainAlias] ?? ['صوتك مسموع ومشاعرك مقدرة'];
     final bestQuote = rainAnswers.isNotEmpty ? rainAnswers.last : 'معكم حسيت بدفا كبير';
@@ -503,7 +532,21 @@ class RoomController extends StateNotifier<RoomState> {
 
   void submitSupportMessage(String message) {
     final updated = List<RoomPlayerInfo>.from(state.players);
-    updated[0].supportMessage = message.trim().isEmpty ? 'كلنا جنبك وسند ليك 🤗' : message.trim();
+    final finalMsg = message.trim().isEmpty ? 'كلنا جنبك وسند ليك 🤗' : message.trim();
+    updated[0].supportMessage = finalMsg;
+
+    // حفظ رسالة الدعم في صندوق الدعم (F1)
+    SupportVaultStorage.addMessage(
+      VaultMessageModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        text: finalMsg,
+        fromAlias: state.myAlias,
+        date: DateTime.now(),
+      ),
+    );
+
+    // تحديث شجرة الدعم (F3)
+    CareTreeStorage.recordAction(addLeaves: 1, addStars: 1);
 
     state = state.copyWith(
       players: updated,
@@ -550,11 +593,25 @@ class RoomController extends StateNotifier<RoomState> {
     int insightEarned = isHumanCorrect ? 15 : 0;
     if (state.isMyRoleRain && votesOnRain <= 1) insightEarned += 10;
 
+    // مضاعفة نقاط التعاطف لوضع اليد الممدودة F4
+    int finalEmpathy = state.empathyPointsEarned;
+    if (state.isNotAloneMode) {
+      finalEmpathy *= 2;
+    }
+
+    // تحديد شريك "نفس الموجة" F2
+    String? resonanceMatch;
+    if (_bots.isNotEmpty) {
+      resonanceMatch = _bots[Random().nextInt(_bots.length)].alias;
+    }
+
     state = state.copyWith(
       phase: RoomPhase.results,
       bestGuesserAlias: bestGuesser,
       bestSupporterAlias: bestSupporter,
       bestCamouflageAlias: bestCamo,
+      resonancePairAlias: resonanceMatch,
+      empathyPointsEarned: finalEmpathy,
       insightPointsEarned: state.insightPointsEarned + insightEarned,
     );
   }
@@ -564,7 +621,11 @@ class RoomController extends StateNotifier<RoomState> {
   }
 
   void restartMatch() {
-    selectRoleAndMatch(state.isMyRoleRain);
+    selectRoleAndMatch(
+      wantsRainRole: state.isMyRoleRain,
+      isNotAloneMode: state.isNotAloneMode,
+      story: state.selectedStory,
+    );
   }
 }
 

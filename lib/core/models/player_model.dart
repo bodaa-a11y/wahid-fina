@@ -1,5 +1,5 @@
 
-enum PlayerRole { normal, struggling }
+enum PlayerRole { normal, struggling, notAlone }
 enum PlayerType { human, bot }
 
 class PlayerModel {
@@ -31,7 +31,9 @@ class PlayerModel {
     return PlayerModel(
       id: map['id'] as String? ?? map['uid'] as String? ?? '',
       name: (map['name'] as String? ?? map['nickname'] as String? ?? '').trim(),
-      role: map['role'] == 'struggling' ? PlayerRole.struggling : PlayerRole.normal,
+      role: map['role'] == 'struggling'
+          ? PlayerRole.struggling
+          : (map['role'] == 'notAlone' ? PlayerRole.notAlone : PlayerRole.normal),
       type: map['type'] == 'bot' ? PlayerType.bot : PlayerType.human,
       friendshipPoints: (map['friendshipPoints'] as int?) ?? 0,
       isReady: (map['isReady'] as bool?) ?? false,
@@ -44,7 +46,7 @@ class PlayerModel {
   Map<String, dynamic> toMap() => {
     'id': id,
     'name': name,
-    'role': role == PlayerRole.struggling ? 'struggling' : 'normal',
+    'role': role == PlayerRole.struggling ? 'struggling' : (role == PlayerRole.notAlone ? 'notAlone' : 'normal'),
     'type': type == PlayerType.bot ? 'bot' : 'human',
     'friendshipPoints': friendshipPoints,
     'isReady': isReady,

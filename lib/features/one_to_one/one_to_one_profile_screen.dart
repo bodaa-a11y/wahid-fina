@@ -6,6 +6,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../core/providers/providers.dart';
 import '../../core/models/player_model.dart';
+import '../../core/models/care_tree_model.dart';
+import '../../core/widgets/care_tree_widget.dart';
 import '../auth/register_screen.dart';
 
 class OneToOneProfileScreen extends ConsumerWidget {
@@ -338,7 +340,18 @@ class OneToOneProfileScreen extends ConsumerWidget {
                       ],
                     ).animate().fadeIn(delay: 450.ms).slideY(begin: 0.15, end: 0),
 
-                    const SizedBox(height: 56),
+                    const SizedBox(height: 32),
+
+                    // F3: شجرة الدعم الحية في الملف الشخصي
+                    FutureBuilder<CareTreeModel>(
+                      future: CareTreeStorage.loadTree(),
+                      builder: (context, snap) {
+                        final tree = snap.data ?? const CareTreeModel(stage: 1, leaves: 4, fruits: 2, stars: 2);
+                        return CareTreeWidget(tree: tree);
+                      },
+                    ).animate().fadeIn(delay: 500.ms),
+
+                    const SizedBox(height: 36),
 
                     // زر تسجيل الخروج
                     OutlinedButton.icon(
